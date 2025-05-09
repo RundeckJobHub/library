@@ -1,0 +1,131 @@
+<joblist>
+  <job>
+    <defaultTab>nodes</defaultTab>
+    <description>Script made by Martin. </description>
+    <executionEnabled>true</executionEnabled>
+    <id>d39a1034-54b9-40cf-b795-8888c0c5b568</id>
+    <loglevel>INFO</loglevel>
+    <name>System Health Check (generic)</name>
+    <nodeFilterEditable>false</nodeFilterEditable>
+    <notification>
+      <onsuccess>
+        <email attachLog='true' attachLogInFile='true' recipients='mvanson@pagerduty.com' subject='Log file pulled' />
+      </onsuccess>
+    </notification>
+    <notifyAvgDurationThreshold />
+    <plugins />
+    <runnerSelector>
+      <filter>EMEA</filter>
+      <runnerFilterMode>TAGS</runnerFilterMode>
+      <runnerFilterType>TAG_FILTER_AND</runnerFilterType>
+    </runnerSelector>
+    <scheduleEnabled>true</scheduleEnabled>
+    <schedules />
+    <sequence keepgoing='false' strategy='node-first'>
+      <command>
+        <autoSecureInput>false</autoSecureInput>
+        <passSecureInput>false</passSecureInput>
+        <script><![CDATA[#!/bin/bash
+
+echo "===== SYSTEM OVERVIEW ====="
+echo "Hostname: $(hostname)"
+echo "IP Address: $(hostname -I | awk '{print $1}')"
+echo ""
+
+echo "===== CPU INFO ====="
+lscpu | grep -E 'Model name|CPU\(s\):|Thread|Socket|Core|Architecture'
+echo ""
+
+echo "===== MEMORY ====="
+free -h
+echo ""
+
+echo "===== DISK USAGE ====="
+df -h | grep -v tmpfs
+echo ""
+
+echo "===== NETWORK INTERFACES ====="
+ip -brief addr
+echo ""
+
+echo "===== OS VERSION ====="
+cat /etc/os-release | grep PRETTY_NAME
+echo ""
+
+echo ""
+echo "===== RUNNING SOFTWARE / PROCESSES ====="
+ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 10
+
+echo ""
+echo "===== ENABLED AND ACTIVE SERVICES ====="
+systemctl list-units --type=service --state=running | head -n 20
+
+echo ""
+echo "===== SOFTWARE ROLES DETECTED ====="
+
+# Define flags
+HAS_HTTPD=$(rpm -qa | grep -Ei '(^|-)httpd(-|$)')
+HAS_NGINX=$(rpm -qa | grep -Ei '(^|-)nginx(-|$)')
+HAS_MARIADB=$(rpm -qa | grep -Ei '(^|-)mariadb(-|$)')
+HAS_MYSQL=$(rpm -qa | grep -Ei '(^|-)mysql(-|$)')
+HAS_POSTGRES=$(rpm -qa | grep -Ei '(^|-)postgresql(-|$)')
+HAS_DOCKER=$(rpm -qa | grep -Ei '(^|-)docker(-|$)')
+HAS_JAVA=$(rpm -qa | grep -Ei '(^|-)java(-|$)')
+HAS_PYTHON=$(rpm -qa | grep -Ei '(^|-)python3(-|$)')
+
+# Report
+if [ "$HAS_HTTPD" ]; then echo "✅ Web server: Apache (httpd)"; fi
+if [ "$HAS_NGINX" ]; then echo "✅ Web server: NGINX"; fi
+if [ "$HAS_MARIADB" ]; then echo "✅ Database: MariaDB"; fi
+if [ "$HAS_MYSQL" ]; then echo "✅ Database: MySQL"; fi
+if [ "$HAS_POSTGRES" ]; then echo "✅ Database: PostgreSQL"; fi
+if [ "$HAS_DOCKER" ]; then echo "✅ Containers: Docker installed"; fi
+if [ "$HAS_JAVA" ]; then echo "✅ Runtime: Java installed"; fi
+if [ "$HAS_PYTHON" ]; then
+    PY_VER=$(rpm -qa | grep -oP 'python3-\K[0-9]+\.[0-9]+' | sort -u | tr '\n' ', ' | sed 's/, $//')
+    echo "✅ Runtime: Python ${PY_VER}"
+fi
+
+
+echo "===== UPTIME ====="
+uptime -p
+echo ""
+
+# ===== COST ESTIMATION =====
+HOURLY_COST=0.08  # EUR/hour
+UPTIME_SECONDS=$(awk '{print int($1)}' /proc/uptime)
+UPTIME_HOURS=$(( UPTIME_SECONDS / 3600 ))
+
+# Format uptime
+UPTIME_STRING="${UPTIME_HOURS} hours"
+if [ "$UPTIME_HOURS" -ge 24 ]; then
+    UPTIME_DAYS=$(echo "scale=1; $UPTIME_HOURS / 24" | bc)
+    UPTIME_STRING="$UPTIME_STRING (${UPTIME_DAYS} days)"
+fi
+if [ "$UPTIME_HOURS" -ge 730 ]; then
+    UPTIME_MONTHS=$(echo "scale=2; $UPTIME_HOURS / 730.5" | bc)
+    UPTIME_STRING="$UPTIME_STRING (${UPTIME_MONTHS} months)"
+fi
+
+# Cost calculation
+TOTAL_COST=$(echo "$UPTIME_HOURS * $HOURLY_COST" | bc)
+MONTHLY_ESTIMATE=$(echo "24 * 30 * $HOURLY_COST" | bc)
+THRESHOLD=100
+ICON="❌"
+if (( $(echo "$MONTHLY_ESTIMATE < $THRESHOLD" | bc -l) )); then
+  ICON="✅"
+fi
+
+echo "===== COST ESTIMATE ====="
+echo "Uptime: $UPTIME_STRING"
+echo "Hourly cost: €$HOURLY_COST"
+echo "Estimated cost: €$TOTAL_COST"
+echo "Projected monthly cost: €$MONTHLY_ESTIMATE $ICON"
+]]></script>
+        <scriptargs />
+      </command>
+    </sequence>
+    <tags>payment-service</tags>
+    <uuid>d39a1034-54b9-40cf-b795-8888c0c5b568</uuid>
+  </job>
+</joblist>
