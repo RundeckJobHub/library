@@ -1,0 +1,34 @@
+{
+  "defaultTab": "output",
+  "description": "Installs AWS CLI V2 for use with certain AWS jobs.\n\n## Overview\n\nSome job step plugins rely on the AWS command line interface to work. The AWS CLI would need to be installed on the Server or Enterprise Runner where the job is executing from.\n\n### Requirements\n\n- This job will only run on Linux based systems with `apt-get` available to install required packages.\n- Python 2.7 will be installed and is required for the S3 job step plugins.\n- The AWS CLI will be installed which is required for the S3 job step plugins and some jobs provided in our pre-built solutions.\n\nIf the job is unsuccessful you will need to install and configure the AWS CLI directly on the machines.\n[AWS CLI Docs](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)",
+  "executionEnabled": true,
+  "group": "Getting Started/Configuration",
+  "id": "b278c832-d51c-4951-a414-93133295cd9b",
+  "loglevel": "INFO",
+  "name": "Install AWS CLI - Linux",
+  "nodeFilterEditable": false,
+  "plugins": {
+    "ExecutionLifecycle": null
+  },
+  "scheduleEnabled": true,
+  "schedules": [],
+  "sequence": {
+    "commands": [
+      {
+        "description": "Run Install Script",
+        "fileExtension": ".sh",
+        "interpreterArgsQuoted": false,
+        "script": "apt-get install -y unzip python2.7 python-pip\ncurl \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\" -o \"awscliv2.zip\"\nunzip awscliv2.zip\n./aws/install",
+        "scriptInterpreter": "sudo"
+      },
+      {
+        "description": "AWS CLI Version",
+        "exec": "aws --version"
+      }
+    ],
+    "keepgoing": false,
+    "strategy": "node-first"
+  },
+  "tags": "aws",
+  "uuid": "b278c832-d51c-4951-a414-93133295cd9b"
+}

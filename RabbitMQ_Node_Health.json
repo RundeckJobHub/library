@@ -1,0 +1,123 @@
+{
+  "defaultTab": "nodes",
+  "description": "Collects diagnostics data from RabbitMQ\n\nThis Job collects and prints the health of a RabbitMQ node using a health-check script developed and maintained by the RabbitMQ team:\n\n\"Collects RabbitMQ and selected OS logs, system-level metrics and other environment information (iostat, kernel limits and similar) that is not always directly related to RabbitMQ but can provide additional insights about the overall state of the node.\"\n\nDetails about this health-check scripts can be found [here](https://github.com/rabbitmq/support-tools/).\n\n**Node Selection**: This Job is designed to execute on the RabbitMQ node. Be sure to select the correct node from the Node Filter.",
+  "executionEnabled": true,
+  "group": "Automated Diagnostics/RabbitMQ",
+  "id": "323c2db8-1482-4980-9008-93a00b0f1369",
+  "loglevel": "INFO",
+  "name": "RabbitMQ Node Health",
+  "nodeFilterEditable": true,
+  "nodefilters": {
+    "dispatch": {
+      "excludePrecedence": true,
+      "keepgoing": false,
+      "rankOrder": "ascending",
+      "successOnEmptyNodeFilter": false,
+      "threadcount": "1"
+    },
+    "filter": ".*"
+  },
+  "nodesSelectedByDefault": true,
+  "notification": {
+    "onfailure": {
+      "plugin": {
+        "configuration": {
+          "incident_id": "${option.pd_incident_id}",
+          "note": "Automated Diagnostics job \"${job.project}/${job.group}/${job.name}\" Failed for incident \"${option.pd_incident_id}\".   See the full Process Automation log at: ${job.url}#output"
+        },
+        "type": "pd-note-incident-notification"
+      }
+    },
+    "onstart": {
+      "plugin": {
+        "configuration": {
+          "incident_id": "${option.pd_incident_id}",
+          "note": "Automated Diagnostics job \"${job.project}/${job.group}/${job.name}\" Started for incident \"${option.pd_incident_id}\".   See the full Process Automation log at: ${job.url}#output"
+        },
+        "type": "pd-note-incident-notification"
+      }
+    },
+    "onsuccess": {
+      "plugin": {
+        "configuration": {
+          "incident_id": "${option.pd_incident_id}",
+          "note": "Automated Diagnostics job \"${job.project}/${job.group}/${job.name}\" Succeeded for incident \"${option.pd_incident_id}\".   See the full Process Automation log at: ${job.url}#output"
+        },
+        "type": "pd-note-incident-notification"
+      }
+    }
+  },
+  "notifyAvgDurationThreshold": null,
+  "options": [
+    {
+      "description": "ID of the PagerDuty incident that should receive the diagnostics queried from this automation.\nThis field is required to invoke this Job.",
+      "label": "PagerDuty Incident ID",
+      "name": "pd_incident_id",
+      "required": true
+    }
+  ],
+  "plugins": {
+    "ExecutionLifecycle": null
+  },
+  "scheduleEnabled": true,
+  "schedules": [],
+  "sequence": {
+    "commands": [
+      {
+        "adhocExecution": "true",
+        "description": "Execute Health Check Script on RabbitMQ Node",
+        "fileExtension": ".sh",
+        "interpreterArgsQuoted": false,
+        "plugins": {
+          "LogFilter": [
+            {
+              "config": {
+                "invalidKeyPattern": "\\s|\\$|\\{|\\}|\\\\",
+                "logData": "true",
+                "name": "output_archive",
+                "regex": ".*\\'(.*)\\'.*",
+                "replaceFilteredResult": "false"
+              },
+              "type": "key-value-data"
+            }
+          ]
+        },
+        "scriptInterpreter": "/bin/bash",
+        "scripturl": "https://raw.githubusercontent.com/rabbitmq/support-tools/main/scripts/rabbitmq-collect-env"
+      },
+      {
+        "configuration": {
+          "cycles": "1",
+          "interval": "3",
+          "progress": "true"
+        },
+        "description": "Wait three seconds",
+        "nodeStep": true,
+        "type": "nixy-waitfor-sleep-workflow-node-step"
+      },
+      {
+        "adhocExecution": "true",
+        "description": "Uncompress the dump to print some values in the job",
+        "exec": "cd /var/log/rabbitmq && tar xvf ${data.output_archive}"
+      },
+      {
+        "adhocExecution": "true",
+        "description": "Operating System related data",
+        "script": "echo \"#############\"\necho \"SERVER HEALTH\"\necho \"#############\"\n\necho \"\"\n\necho \"Hostname:\"\ncat /var/log/rabbitmq/rmq/system/hostname\n\necho \"\"\n\necho \"Operating System:\"\ncat /var/log/rabbitmq/rmq/system/uname\n\necho \"\"\n\necho \"Uptime:\"\ncat /var/log/rabbitmq/rmq/system/uptime\n\necho \"\"\n\necho \"VMSTAT data:\"\ncat /var/log/rabbitmq/rmq/system/vmstat\n"
+      },
+      {
+        "adhocExecution": "true",
+        "description": "RabbitMQ specific data",
+        "script": "echo \"#############\"\necho \"SERVER HEALTH\"\necho \"#############\"\n\necho \"\"\n\necho \"RMQ Environment:\"\ncat /var/log/rabbitmq/rmq/rabbitmq/rabbitmqctl_environment\n\necho \"\"\n\necho \"RMQ Status:\"\ncat /var/log/rabbitmq/rmq/rabbitmq/rabbitmqctl_status\n\necho \"\"\n\necho \"RMQ PID Limits:\"\ncat /var/log/rabbitmq/rmq/rabbitmq/rabbitmq_pid_limits\n"
+      },
+      {
+        "adhocExecution": "true",
+        "description": "Remove Diagnostic Data Files",
+        "exec": "rm ${data.output_archive} && rm -rf /var/log/rabbitmq/rmq && echo \"All done!\""
+      }
+    ],
+    "keepgoing": false,
+    "strategy": "sequential"
+  },
+  "uuid": "323c2db8-1482-4980-9008-93a00b0f1369"
+}

@@ -1,0 +1,47 @@
+{
+  "defaultTab": "nodes",
+  "description": "This job will configure the AWS CLI running on an endpoint with authentication information.\n\n### Requirements\n\n- AWS CLI is already installed on the target endpoint.",
+  "executionEnabled": true,
+  "group": "Getting Started/Configuration",
+  "id": "3ee86d0b-0ba1-4e3f-87d2-f021b7ab6f43",
+  "loglevel": "INFO",
+  "name": "Configure AWS CLI",
+  "nodeFilterEditable": false,
+  "options": [
+    {
+      "label": "AWS Access Key",
+      "name": "aws-access-key-id",
+      "required": true
+    },
+    {
+      "label": "AWS Secret Key",
+      "name": "aws-access-secret-key",
+      "required": true,
+      "secure": true,
+      "valueExposed": true
+    },
+    {
+      "label": "AWS Region",
+      "name": "aws-region",
+      "optionValuesPluginType": "aws-regions-job-options",
+      "required": true
+    }
+  ],
+  "plugins": {
+    "ExecutionLifecycle": null
+  },
+  "scheduleEnabled": true,
+  "schedules": [],
+  "sequence": {
+    "commands": [
+      {
+        "description": "Configure AWS Client",
+        "script": "aws configure set aws_access_key_id @option.aws-access-key-id@\naws configure set aws_secret_access_key @option.aws-access-secret-key@\naws configure set default.region @option.aws-region@"
+      }
+    ],
+    "keepgoing": false,
+    "strategy": "node-first"
+  },
+  "tags": "aws",
+  "uuid": "3ee86d0b-0ba1-4e3f-87d2-f021b7ab6f43"
+}
